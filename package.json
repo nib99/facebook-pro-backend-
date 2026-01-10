@@ -1,5 +1,5 @@
 {
-name": "facebook-pro-backend",
+  "name": "facebook-pro-backend",
   "version": "1.0.0",
   "description": "Facebook Pro - Modern Social Network Backend with Video Calls & Live Streaming",
   "main": "server.js",
