@@ -4,7 +4,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copy package files first (best caching)
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 # Install ONLY production deps — use modern flag
 # (also works with NODE_ENV=production, but --omit=dev is explicit)
