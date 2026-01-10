@@ -1,41 +1,36 @@
-# Use official Node.js LTS image
+# Use official Node.js LTS image (node 18 is still maintained until ~April 2025, but consider upgrading to 20/22 later)
 FROM node:18-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files first (best caching)
+COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm ci --only=production && \
-    npm cache clean --force
+# Install ONLY production deps — use modern flag
+# (also works with NODE_ENV=production, but --omit=dev is explicit)
+RUN npm ci --omit=dev \
+    && npm cache clean --force
 
-# Copy application files
+# Copy the rest of the application
 COPY . .
 
-# Create necessary directories
+# Create necessary directories (still as root)
 RUN mkdir -p uploads logs
 
-# Create non-root user
+# Create non-root user & set ownership
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
 
-# Change ownership
-RUN chown -R nodejs:nodejs /app
-
-# Switch to non-root user
+# Switch to non-root
 USER nodejs
 
-# Expose port
 EXPOSE 5000
 
-# Health check
+# Health check (looks good)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Set environment to production
 ENV NODE_ENV=production
 
-# Start application
 CMD ["node", "server.js"]
