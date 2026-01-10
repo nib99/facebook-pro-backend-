@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: facebook-pro-backend           # Choose any name you like
+    env: node                            # or just "node"
+    region: oregon                       # or frankfurt, singapore, etc. (pick close to your users)
+    plan: free                           # or starter, etc.
+    branch: main                         # or whatever branch you use
+    buildCommand: npm ci                 # or npm install --production
+    startCommand: npm start
+    rootDir: .                           # "." means repo root (leave as-is since your files are in root)
+    healthCheckPath: /api/health         # if you have this endpoint; helps Render know app is ready
+    autoDeploy: true                     # enables automatic deploys on push (already default)
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"                    # Render actually ignores this, but good practice
+      - key: MONGODB_URI
+        sync: false                      # ← Render will ask you to input this secret during setup
+      - key: JWT_SECRET
+        generateValue: true              # ← auto-generates a secure random value
+      # Add ALL other secrets from your .env.example the same way
+      # e.g.:
+      # - key: CLOUDINARY_CLOUD_NAME
+      #   sync: false
+      # - key: CLOUDINARY_API_KEY
+      #   sync: false
