@@ -1,42 +1,41 @@
-```dockerfile
-# Use official Node.js LTS image
-FROM node:18-alpine
+# Use active LTS: node:22-alpine (or node:20-alpine if you prefer stability over newest features)
+# ~80-110 MB final size, excellent security & performance
+FROM node:22-alpine
 
-# Set working directory
+# Optional but useful: metadata labels
+LABEL maintainer="Nibras <your-contact>"
+LABEL org.opencontainers.image.source="https://github.com/nib99/facebook-pro-backend"
+LABEL org.opencontainers.image.description="Real-time social backend (Express + Socket.io + MongoDB)"
+
 WORKDIR /app
 
-# Copy package files
+# Copy package files first → excellent layer caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && \
+# Install prod deps only + clean cache in one layer
+RUN npm ci --omit=dev --ignore-scripts --prefer-offline && \
     npm cache clean --force
 
-# Copy application files
-COPY . .
+# Copy source code with correct ownership from the start (critical fix!)
+COPY --chown=node:node . .
 
-# Create necessary directories
-RUN mkdir -p uploads logs
+# Ensure runtime dirs exist and are correctly owned
+# (volumes in compose will often mount over them anyway)
+RUN mkdir -p uploads logs && \
+    chown -R node:node uploads logs
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+# Switch to non-root (security best practice)
+USER node
 
-# Change ownership
-RUN chown -R nodejs:nodejs /app
-
-# Switch to non-root user
-USER nodejs
-
-# Expose port
 EXPOSE 5000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+# Reliable healthcheck using built-in wget (no extra packages needed)
+# Adjust path if your health endpoint is /health instead of /api/health
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:5000/api/health || exit 1
 
-# Set environment to production
-ENV NODE_ENV=production
+# Production defaults (override via compose/env_file if needed)
+ENV NODE_ENV=production \
+    PORT=5000
 
-# Start application
 CMD ["node", "server.js"]
